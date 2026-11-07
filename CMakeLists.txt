@@ -119,7 +119,12 @@ nw_embed(${NW_APP_TARGET} nw_font_bold ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/
 
 target_include_directories(${NW_APP_TARGET} PRIVATE src)
 target_compile_options(${NW_APP_TARGET} PRIVATE -Wall -Wextra $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
-target_link_libraries(${NW_APP_TARGET} PRIVATE nuworld_frontend nuworld_gfx nuworld_imgui nuworld_port SDL3::SDL3)
+target_link_libraries(${NW_APP_TARGET} PRIVATE nuworld_frontend nuworld_gfx nuworld_audio nuworld_imgui nuworld_port SDL3::SDL3)
+if(ANDROID)
+  # Dear ImGui's OpenGL ES backend calls GLES symbols directly.
+  find_library(NW_GLESV3_LIBRARY GLESv3 REQUIRED)
+  target_link_libraries(${NW_APP_TARGET} PRIVATE ${NW_GLESV3_LIBRARY})
+endif()
 if(MINGW)
   # Keep the release a single .exe: libc++ (Dear ImGui) linked in, not libc++.dll.
   target_link_options(${NW_APP_TARGET} PRIVATE -static-libstdc++)
