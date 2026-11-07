@@ -217,7 +217,11 @@ void nw_input_event(const SDL_Event *event)
 static void nw_input_rumble(void)
 {
     uint8_t small, big;
+#if defined(NW_WITH_GAME)
     nw_pad_motors(&small, &big);
+#else
+    small = big = 0;
+#endif
     uint16_t low = (uint16_t)(big * 0x101 * nw_input_controls.rumble / 100);
     uint16_t high = (uint16_t)(small ? 0xFFFF * nw_input_controls.rumble / 100 : 0);
     uint64_t now = SDL_GetTicks();
@@ -255,7 +259,11 @@ static void nw_input_prompts(void)
     NwPrompts p;
     nw_input_style = nw_prompts_style(nw_input_controls.prompts, &d);
     nw_prompts_build(nw_input_style, &nw_input_controls, &p);
+#if defined(NW_WITH_GAME)
     nw_font3d_prompts(&p);
+#else
+    (void)p; /* The setup shell has no in-game 3D prompt renderer. */
+#endif
 }
 
 void nw_input_poll(bool keyboard)
@@ -277,7 +285,9 @@ void nw_input_poll(bool keyboard)
     }
     nw_input_prompts();
     nw_input_sent = in;
+#if defined(NW_WITH_GAME)
     nw_pad_set(&in);
+#endif
     if (nw_input_pad) {
         nw_input_rumble();
     }
