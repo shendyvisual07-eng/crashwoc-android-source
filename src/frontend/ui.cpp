@@ -127,7 +127,7 @@ bool nw_ui_init(NwPlatform *p, bool compact)
         return SDL_SetError("Dear ImGui could not start");
     }
 #if defined(__ANDROID__)
-    const char *glsl_version = "#version 320 es\nprecision highp float;\nprecision highp int;";
+    const char *glsl_version = "#version 320 es";
 #else
     const char *glsl_version = "#version 330 core";
 #endif
