@@ -11,6 +11,7 @@ extern "C" {
 #include "frontend/settings.h"
 #include "frontend/import.h"
 #include "platform/paths.h"
+#include "platform/input.h"
 #include "vfs/extract.h"
 }
 
@@ -39,6 +40,8 @@ struct NwWizard {
     NwSettings settings;
     int section;
     bool settings_dirty;
+    int bind_target;
+    bool bind_keys;
 };
 
 static const SDL_DialogFileFilter nw_wizard_filters[] = {
@@ -134,6 +137,7 @@ NwWizard *nw_wizard_create(SDL_Window *window, const char *root)
     if (!nw_settings_load(&w->settings, root)) {
         SDL_ClearError(); /* a first launch has no settings file yet */
     }
+    nw_input_set_controls(&w->settings.controls);
     if (!w->root || !w->import_dir) {
         nw_wizard_destroy(w);
         return NULL;
@@ -148,6 +152,7 @@ void nw_wizard_destroy(NwWizard *w)
     }
     nw_import_free(w->job);
     nw_import_list_free(&w->list);
+    nw_input_listen(NW_INPUT_LISTEN_OFF);
     SDL_free(w->image);
     SDL_free(w->import_dir);
     SDL_free(w->root);
@@ -156,6 +161,7 @@ void nw_wizard_destroy(NwWizard *w)
 
 void nw_wizard_event(NwWizard *w, const SDL_Event *e)
 {
+    nw_input_event(e);
     if (e->type == SDL_EVENT_DROP_FILE && e->drop.data) {
         if (w->page != NW_PAGE_RUN) {
             nw_wizard_start(w, e->drop.data);
@@ -419,17 +425,117 @@ static void nw_wizard_controller(NwWizard *w)
 {
     NwControls *c = &w->settings.controls;
     static const char *const prompt_names[] = { "Auto", "Xbox", "PlayStation", "Nintendo", "Steam Deck", "Keyboard" };
+
+    /* Complete a pending capture on the frame after SDL delivered the input event. */
+    if (w->bind_target >= 0) {
+        int heard = nw_input_heard();
+        if (heard >= 0) {
+            if (heard > 0) {
+                uint16_t(*binds)[NW_CONTROL_BINDS] = w->bind_keys ? c->keys : c->pad;
+                int count = w->bind_keys ? NW_CONTROL_TARGETS : NW_CONTROL_BUTTONS;
+                nw_controls_bind(binds, count, w->bind_target, (uint16_t)heard);
+                w->settings_dirty = true;
+                nw_input_set_controls(c);
+            }
+            w->bind_target = -1;
+            nw_input_listen(NW_INPUT_LISTEN_OFF);
+        }
+    }
+
     ImGui::TextUnformatted("TOUCH CONTROLS");
     ImGui::TextWrapped("The existing on-screen touch controls remain enabled. Their layout is not changed here.");
-    ImGui::SeparatorText("GAMEPAD");
-    if (ImGui::SliderInt("Left stick deadzone", &c->left_deadzone, 0, 90, "%d%%")) w->settings_dirty = true;
-    if (ImGui::SliderInt("Right stick deadzone", &c->right_deadzone, 0, 90, "%d%%")) w->settings_dirty = true;
-    if (ImGui::SliderInt("Trigger threshold", &c->trigger_press, 1, 100, "%d%%")) w->settings_dirty = true;
-    if (ImGui::SliderInt("Rumble strength", &c->rumble, 0, 100, "%d%%")) w->settings_dirty = true;
+    ImGui::SeparatorText("GAMEPAD & KEYBOARD MAPPING");
+    const char *pad_name = nw_input_pad_name();
+    ImGui::Text("Connected gamepad: %s", pad_name ? pad_name : "Not detected - connect a controller");
+    ImGui::TextDisabled("Tap a mapping field, then press the button or key you want to assign.");
+    ImGui::Spacing();
+
+    if (ImGui::BeginTable("controller_mapping", 3,
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp |
+        ImGuiTableFlags_ScrollY, ImVec2(0, 310.0f))) {
+        ImGui::TableSetupColumn("GAME ACTION", ImGuiTableColumnFlags_WidthStretch, 0.38f);
+        ImGui::TableSetupColumn("GAMEPAD", ImGuiTableColumnFlags_WidthStretch, 0.31f);
+        ImGui::TableSetupColumn("KEYBOARD", ImGuiTableColumnFlags_WidthStretch, 0.31f);
+        ImGui::TableHeadersRow();
+        for (int i = 0; i < NW_CONTROL_TARGETS; i++) {
+            ImGui::PushID(i);
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextWrapped("%s", nw_control_targets[i].label);
+            if (i < NW_CONTROL_BUTTONS) {
+                ImGui::TableNextColumn();
+                const char *pad_label = c->pad[i][0] ? nw_input_pad_label(c->pad[i][0]) : NULL;
+                char pad_button[96];
+                SDL_snprintf(pad_button, sizeof(pad_button), "%s##pad", w->bind_target == i && !w->bind_keys
+                    ? "Press a button..." : (pad_label ? pad_label : "Unassigned"));
+                if (ImGui::Button(pad_button, ImVec2(-FLT_MIN, 0))) {
+                    w->bind_target = i;
+                    w->bind_keys = false;
+                    nw_input_listen(NW_INPUT_LISTEN_PAD);
+                }
+                if (w->bind_target == i && !w->bind_keys) {
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Cancel##pad")) {
+                        w->bind_target = -1;
+                        nw_input_listen(NW_INPUT_LISTEN_OFF);
+                    }
+                }
+            } else {
+                ImGui::TableNextColumn();
+                ImGui::TextDisabled("Analog stick");
+            }
+            ImGui::TableNextColumn();
+            const char *key_label = c->keys[i][0] ? nw_controls_key_name(c->keys[i][0]) : NULL;
+            char key_button[96];
+            SDL_snprintf(key_button, sizeof(key_button), "%s##key", w->bind_target == i && w->bind_keys
+                ? "Press a key..." : (key_label ? key_label : "Unassigned"));
+            if (ImGui::Button(key_button, ImVec2(-FLT_MIN, 0))) {
+                w->bind_target = i;
+                w->bind_keys = true;
+                nw_input_listen(NW_INPUT_LISTEN_KEYS);
+            }
+            if (w->bind_target == i && w->bind_keys) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Cancel##key")) {
+                    w->bind_target = -1;
+                    nw_input_listen(NW_INPUT_LISTEN_OFF);
+                }
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    if (w->bind_target >= 0) {
+        ImGui::TextColored(nw_wizard_warn, "Listening: press a %s for %s. Escape cancels.",
+            w->bind_keys ? "keyboard key" : "gamepad button/trigger", nw_control_targets[w->bind_target].label);
+    }
+
+    ImGui::Spacing();
+    if (ImGui::Button("Reset mappings")) {
+        nw_controls_defaults(c);
+        w->bind_target = -1;
+        nw_input_listen(NW_INPUT_LISTEN_OFF);
+        nw_input_set_controls(c);
+        w->settings_dirty = true;
+    }
+    ImGui::SameLine();
     int prompts = (int)c->prompts;
     if (ImGui::Combo("Button prompts", &prompts, prompt_names, NW_PROMPT_STYLES)) {
         c->prompts = (NwPromptStyle)prompts;
         w->settings_dirty = true;
+        nw_input_set_controls(c);
+    }
+    if (ImGui::SliderInt("Left stick deadzone", &c->left_deadzone, 0, 90, "%d%%")) {
+        w->settings_dirty = true; nw_input_set_controls(c);
+    }
+    if (ImGui::SliderInt("Right stick deadzone", &c->right_deadzone, 0, 90, "%d%%")) {
+        w->settings_dirty = true; nw_input_set_controls(c);
+    }
+    if (ImGui::SliderInt("Trigger threshold", &c->trigger_press, 1, 100, "%d%%")) {
+        w->settings_dirty = true; nw_input_set_controls(c);
+    }
+    if (ImGui::SliderInt("Rumble strength", &c->rumble, 0, 100, "%d%%")) {
+        w->settings_dirty = true; nw_input_set_controls(c);
     }
 }
 
@@ -453,6 +559,7 @@ static void nw_wizard_settings(NwWizard *w)
     if (ImGui::Button("Save settings")) {
         if (nw_settings_save(&w->settings, w->root)) {
             w->settings_dirty = false;
+            nw_input_set_controls(&w->settings.controls);
             SDL_strlcpy(w->notice, "Settings saved.", sizeof(w->notice));
         } else {
             SDL_strlcpy(w->error, SDL_GetError(), sizeof(w->error));
