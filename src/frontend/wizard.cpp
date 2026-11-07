@@ -223,7 +223,9 @@ static NwWizardResult nw_wizard_pick(NwWizard *w)
 
     nw_wizard_title("Welcome");
     ImGui::TextWrapped("NuWorld needs a disc image of your own copy of the game:");
-    ImGui::BulletText("Crash Bandicoot: The Wrath of Cortex (PS2, PAL v1.03, SLES-50386)");
+    ImGui::Bullet();
+    ImGui::SameLine();
+    ImGui::TextWrapped("Crash Bandicoot: The Wrath of Cortex (PS2, PAL v1.03, SLES-50386)");
     ImGui::BulletText(".iso, or .bin with its .cue");
 
     if (w->had_disc) {
@@ -482,11 +484,12 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
                         unit * 0.25f, IM_COL32(24, 105, 116, 28), 48);
 
     /* Center the whole interface and keep a comfortable safe margin on short screens. */
-    const float margin_x = SDL_max(12.0f, vp->Size.x * 0.035f);
-    const float margin_y = SDL_max(8.0f, vp->Size.y * 0.045f);
-    const float max_width = 1440.0f;
-    const float width = SDL_min(max_width, vp->Size.x - margin_x * 2.0f);
-    const float height = SDL_max(220.0f, vp->Size.y - margin_y * 2.0f);
+    const float margin_x = SDL_max(10.0f, vp->Size.x * 0.025f);
+    const float margin_y = SDL_max(8.0f, vp->Size.y * 0.035f);
+    /* Use nearly the full landscape viewport. A desktop-style fixed max width
+       made the Android panel look like a narrow floating dialog on tablets/phones. */
+    const float width = SDL_max(1.0f, vp->Size.x - margin_x * 2.0f);
+    const float height = SDL_max(1.0f, vp->Size.y - margin_y * 2.0f);
     const ImVec2 pos(vp->Pos.x + (vp->Size.x - width) * 0.5f,
                      vp->Pos.y + (vp->Size.y - height) * 0.5f);
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
@@ -512,7 +515,7 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
     ImGui::Separator();
 
     const float available = ImGui::GetContentRegionAvail().x;
-    const float nav_width = SDL_max(126.0f, SDL_min(205.0f, available * 0.235f));
+    const float nav_width = SDL_max(150.0f, available * 0.225f);
     ImGui::BeginChild("navigation", ImVec2(nav_width, 0), ImGuiChildFlags_Borders);
     ImGui::TextDisabled("MENU");
     ImGui::Spacing();
@@ -528,6 +531,7 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
 
     ImGui::SameLine(0.0f, 12.0f);
     ImGui::BeginChild("content", ImVec2(0, 0), ImGuiChildFlags_Borders);
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x);
     ImGui::TextDisabled(w->section == 0 ? "FIRST-TIME SETUP" : "SETTINGS");
     if (w->section == 1) ImGui::TextUnformatted("GRAPHICS & PERFORMANCE");
     else if (w->section == 2) ImGui::TextUnformatted("CONTROLLER");
@@ -544,6 +548,7 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
     } else {
         nw_wizard_settings(w);
     }
+    ImGui::PopTextWrapPos();
     ImGui::EndChild();
     ImGui::End();
     ImGui::PopStyleColor(3);
