@@ -126,7 +126,12 @@ bool nw_ui_init(NwPlatform *p, bool compact)
         ImGui::DestroyContext();
         return SDL_SetError("Dear ImGui could not start");
     }
-    if (!ImGui_ImplOpenGL3_Init("#version 330 core")) {
+#if defined(__ANDROID__)
+    const char *glsl_version = "#version 320 es";
+#else
+    const char *glsl_version = "#version 330 core";
+#endif
+    if (!ImGui_ImplOpenGL3_Init(glsl_version)) {
         ImGui_ImplSDL3_Shutdown();
         ImGui::DestroyContext();
         return SDL_SetError("Dear ImGui could not start OpenGL");
