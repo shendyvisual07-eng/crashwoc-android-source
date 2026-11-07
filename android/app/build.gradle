@@ -1,0 +1,95 @@
+plugins {
+    id "com.android.application"
+}
+
+import java.util.zip.ZipFile
+
+def sdlVersion = "3.4.16"
+def sdlArchive = layout.buildDirectory.file("downloads/SDL3-devel-${sdlVersion}-android.zip")
+def sdlAar = layout.projectDirectory.file("libs/SDL3.aar")
+
+tasks.register("prepareSDL3Aar") {
+    outputs.file(sdlAar)
+    doLast {
+        def archive = sdlArchive.get().asFile
+        if (!archive.exists()) {
+            archive.parentFile.mkdirs()
+            new URL("https://github.com/libsdl-org/SDL/releases/download/release-${sdlVersion}/SDL3-devel-${sdlVersion}-android.zip").withInputStream { input ->
+                archive.withOutputStream { output -> output << input }
+            }
+        }
+        ZipFile zip = new ZipFile(archive)
+        try {
+            def entry = zip.entries().find { !it.directory && it.name.toLowerCase(Locale.ROOT).endsWith(".aar") }
+            if (entry == null) {
+                throw new GradleException("The SDL3 Android archive did not contain an AAR")
+            }
+            sdlAar.asFile.parentFile.mkdirs()
+            zip.getInputStream(entry).withCloseable { input ->
+                sdlAar.asFile.withOutputStream { output -> output << input }
+            }
+        } finally {
+            zip.close()
+        }
+    }
+}
+
+tasks.named("preBuild").configure { dependsOn("prepareSDL3Aar") }
+
+android {
+    namespace "com.shendyvisual.crashwoc"
+    compileSdk 35
+    ndkVersion "27.2.12479018"
+
+    defaultConfig {
+        applicationId "com.shendyvisual.crashwoc"
+        minSdk 29
+        targetSdk 35
+        versionCode 1
+        versionName "0.1.0-android-preview"
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        prefab true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file("../../CMakeLists.txt")
+            version "3.25.2"
+        }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile "src/main/AndroidManifest.xml"
+        }
+    }
+}
+
+dependencies {
+    implementation files("libs/SDL3.aar")
+}
