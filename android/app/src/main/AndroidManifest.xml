@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+    <uses-feature android:glEsVersion="0x00030002" android:required="true" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
 
     <application
         android:allowBackup="false"
-        android:label="CrashWOC Android Preview"
+        android:label="CrashWOC NuWorld"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="false">
