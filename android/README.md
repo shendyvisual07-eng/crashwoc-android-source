@@ -9,13 +9,13 @@ This is the first native Android packaging milestone, not a playable game build.
 - Android Gradle Plugin 8.7.3
 - Gradle 8.9
 - JDK 17
-- Android NDK 27.2.12479018
+- Android NDK 28.2.13676358
 - CMake 3.25.2
 - SDL 3.4.16 Android AAR, downloaded from the official SDL release during the Gradle build
 
 ## Build a debug APK
 
-Install Android SDK platform 35, build-tools, NDK 27.2.12479018, and CMake 3.25.2. Then run from this directory:
+Install Android SDK platform 35, build-tools, NDK 28.2.13676358, and CMake 3.25.2. Then run from this directory:
 
 ```sh
 gradle assembleDebug
