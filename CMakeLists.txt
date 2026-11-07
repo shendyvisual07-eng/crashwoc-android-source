@@ -94,11 +94,12 @@ endfunction()
 
 if(ANDROID)
   set(NW_APP_TARGET main)
-  add_library(main SHARED
+  set(NW_APP_LIBRARY_TYPE SHARED)
 else()
   set(NW_APP_TARGET crashwoc-nuworld)
-  add_executable(crashwoc-nuworld
+  set(NW_APP_LIBRARY_TYPE)
 endif()
+add_library(${NW_APP_TARGET} ${NW_APP_LIBRARY_TYPE}
   src/main.c
   src/platform/audio.c
   src/platform/display.c
@@ -109,8 +110,8 @@ endif()
   src/frontend/debug.cpp
   src/frontend/ui.cpp
   src/frontend/wizard.cpp)
-nw_embed(crashwoc-nuworld nw_font_regular ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/AtkinsonHyperlegible-Regular.ttf)
-nw_embed(crashwoc-nuworld nw_font_bold ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/AtkinsonHyperlegible-Bold.ttf)
+nw_embed(${NW_APP_TARGET} nw_font_regular ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/AtkinsonHyperlegible-Regular.ttf)
+nw_embed(${NW_APP_TARGET} nw_font_bold ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/AtkinsonHyperlegible-Bold.ttf)
 
 target_include_directories(${NW_APP_TARGET} PRIVATE src)
 target_compile_options(${NW_APP_TARGET} PRIVATE -Wall -Wextra $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
