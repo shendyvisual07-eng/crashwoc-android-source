@@ -88,3 +88,8 @@ A successful APK build would only prove that the native app packages and starts.
 - NuWorld VU shaders and Dear ImGui are configured to use GLSL ES 3.20 on Android.
 - Android CMake uses the SDL3 Prefab package and disables desktop decomp/tests in this build configuration.
 - This is an initial compile/bring-up step, not a verified playable build. GLES driver compatibility, shader compilation, renderer output, SAF ISO import, and runtime/gameplay remain to be validated.
+
+
+## Build recovery
+
+The first attempt to compile the full desktop NuWorld application directly for Android was premature: the desktop entry point depends on generated decomp/runtime units and platform integrations that are not yet included in the Android target. The Android CMake path is therefore temporarily restored to the known-good SDL3 shell so CI can validate packaging independently. GLES changes remain isolated for incremental porting after the Android runtime source graph is completed. The shell APK is not a playable game build.
