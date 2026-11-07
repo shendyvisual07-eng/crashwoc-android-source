@@ -13,6 +13,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Android Phase A: build a small SDL3 native shell first.
+# The desktop renderer is OpenGL 3.3 and is not GLES-compatible yet.
+if(ANDROID)
+  find_package(SDL3 REQUIRED CONFIG)
+  add_library(main SHARED android/src/main/cpp/android_main.c)
+  target_compile_options(main PRIVATE -Wall -Wextra)
+  target_link_libraries(main PRIVATE SDL3::SDL3)
+  return()
+endif()
+
 option(NUWORLD_SYSTEM_SDL3 "Use an installed SDL3 instead of building the pinned release" OFF)
 option(NUWORLD_TESTS "Build the C tests (ctest)" ON)
 option(NUWORLD_DECOMP "Generate and compile the decomp units (needs Python 3.11+ with libclang)" ON)
