@@ -51,16 +51,12 @@ static TouchState nw_android_touch_state(const TouchPoint points[TOUCH_POINTS])
         state.fingers++;
         const float x = points[i].x;
         const float y = points[i].y;
-        if (x < 0.34f && y > 0.55f) {
-            state.left |= x < 0.16f;
-            state.right |= x >= 0.16f;
-            state.up |= y < 0.72f;
-            state.down |= y >= 0.72f;
-        }
-        if (x > 0.68f && y > 0.48f) {
-            state.circle |= x > 0.82f;
-            state.cross |= x <= 0.82f;
-        }
+        state.left |= x >= 0.04f && x <= 0.13f && y >= 0.70f && y <= 0.82f;
+        state.right |= x >= 0.22f && x <= 0.31f && y >= 0.70f && y <= 0.82f;
+        state.up |= x >= 0.13f && x <= 0.22f && y >= 0.56f && y <= 0.68f;
+        state.down |= x >= 0.13f && x <= 0.22f && y >= 0.84f && y <= 0.96f;
+        state.cross |= x >= 0.78f && x <= 0.87f && y >= 0.70f && y <= 0.82f;
+        state.circle |= x >= 0.88f && x <= 0.97f && y >= 0.56f && y <= 0.68f;
     }
     return state;
 }
