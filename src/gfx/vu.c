@@ -336,7 +336,14 @@ static GLuint nw_vu_shader(GLenum type, NwVuProgram program, const char *src)
                                                        "FACEY",   "SKIN",  "TRIXUV", "SKINXUV", "PTL",
                                                        "WATER", "WATERUV", "TRIGLASS", "SKNGLASS" };
     char head[512];
+#if defined(__ANDROID__)
+    int n = SDL_snprintf(head, sizeof(head),
+                         "#version 320 es\nprecision highp float;\nprecision highp int;\n"
+                         "precision highp sampler2D;\nprecision highp usampler2D;\n"
+                         "precision highp samplerBuffer;\nprecision highp usamplerBuffer;\n");
+#else
     int n = SDL_snprintf(head, sizeof(head), "#version 330 core\n");
+#endif
     for (int i = 0; i < NW_VU_PROGRAMS; i++) {
         n += SDL_snprintf(head + n, sizeof(head) - (size_t)n, "#define %s %d\n", names[i], i);
     }
