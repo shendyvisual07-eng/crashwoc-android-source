@@ -21,8 +21,13 @@ bool nw_platform_init(NwPlatform *p, const char *title, int width, int height)
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+#if defined(__ANDROID__)
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
@@ -37,7 +42,13 @@ bool nw_platform_init(NwPlatform *p, const char *title, int width, int height)
 
     p->gl = SDL_GL_CreateContext(p->window);
     if (!p->gl) {
-        nw_platform_fail("OpenGL 3.3 is required");
+        nw_platform_fail(
+#if defined(__ANDROID__)
+            "OpenGL ES 3.2 is required"
+#else
+            "OpenGL 3.3 is required"
+#endif
+        );
         nw_platform_shutdown(p);
         return false;
     }
