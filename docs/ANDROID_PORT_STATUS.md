@@ -53,12 +53,19 @@ The upstream README also states that NuWorld is not yet intended for normal play
 
 - [x] Dedicated branch created: `android/port-foundation`.
 - [x] Initial source/build audit recorded.
-- [ ] Android Gradle project and SDL3 activity integration.
+- [x] Android Gradle project scaffold, SDL3 AAR integration, custom SDLActivity, and an isolated native SDL smoke-test target committed (build still pending).
 - [ ] Android-compatible renderer.
 - [ ] SAF import and app-private storage integration.
 - [ ] Touch controls and lifecycle handling.
-- [ ] Successful Android CI build.
+- [ ] Successful Android CI build (workflow added; result not yet verified).
 - [ ] Device testing and playable game validation.
+
+## Phase A implementation notes
+
+- Android project lives under `android/` and targets API 29+ / `arm64-v8a`.
+- Gradle downloads the official SDL 3.4.16 Android development archive and extracts its AAR; SDL is linked through Prefab as `SDL3::SDL3`.
+- The Android CMake path returns early with a small `main` shared library. This intentionally avoids compiling the desktop-only OpenGL 3.3 renderer before its GLES port exists.
+- `.github/workflows/android.yml` builds a debug APK and uploads it as a workflow artifact when the branch is pushed.
 
 ## Important limitation
 
