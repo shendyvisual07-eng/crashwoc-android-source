@@ -78,3 +78,13 @@ The upstream README also states that NuWorld is not yet intended for normal play
 ## Important limitation
 
 A successful APK build would only prove that the native app packages and starts. It would not prove that the game itself is playable. Do not describe this port as complete until the game runtime and the device test checklist pass.
+
+
+## Android renderer bring-up (GLES)
+
+- Replaced the Android-only SDL input preview target with the shared NuWorld frontend, VFS, renderer, and Dear ImGui sources.
+- Android now requests an OpenGL ES 3.2 context; desktop continues to request OpenGL 3.3 core.
+- The GL loader maps `glClearDepth` to GLES `glClearDepthf`; polygon-mode wireframe is disabled on Android because GLES does not expose `glPolygonMode`.
+- NuWorld VU shaders and Dear ImGui are configured to use GLSL ES 3.20 on Android.
+- Android CMake uses the SDL3 Prefab package and disables desktop decomp/tests in this build configuration.
+- This is an initial compile/bring-up step, not a verified playable build. GLES driver compatibility, shader compilation, renderer output, SAF ISO import, and runtime/gameplay remain to be validated.
