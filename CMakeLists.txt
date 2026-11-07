@@ -13,15 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Android Phase A: build a small SDL3 native shell first.
-# The desktop renderer is OpenGL 3.3 and is not GLES-compatible yet.
-if(ANDROID)
-  find_package(SDL3 REQUIRED CONFIG)
-  add_library(main SHARED android/src/main/cpp/android_main.c)
-  target_compile_options(main PRIVATE -Wall -Wextra)
-  target_link_libraries(main PRIVATE SDL3::SDL3)
-  return()
-endif()
+# Android uses the same frontend/VFS/renderer sources with an OpenGL ES 3.2 context.
+# NUWORLD_SYSTEM_SDL3 is enabled by Gradle so SDL3 comes from its Android Prefab package.
 
 option(NUWORLD_SYSTEM_SDL3 "Use an installed SDL3 instead of building the pinned release" OFF)
 option(NUWORLD_TESTS "Build the C tests (ctest)" ON)
@@ -73,6 +66,9 @@ add_library(nuworld_imgui STATIC
   ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
 target_include_directories(nuworld_imgui SYSTEM PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_compile_definitions(nuworld_imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
+if(ANDROID)
+  target_compile_definitions(nuworld_imgui PUBLIC IMGUI_IMPL_OPENGL_ES3)
+endif()
 target_compile_options(nuworld_imgui PRIVATE -fno-exceptions -fno-rtti)
 target_link_libraries(nuworld_imgui PUBLIC SDL3::SDL3 ${CMAKE_DL_LIBS})
 
@@ -96,7 +92,13 @@ function(nw_embed_dir target name dir)
   target_sources(${target} PRIVATE ${out})
 endfunction()
 
-add_executable(crashwoc-nuworld
+if(ANDROID)
+  set(NW_APP_TARGET main)
+  add_library(main SHARED
+else()
+  set(NW_APP_TARGET crashwoc-nuworld)
+  add_executable(crashwoc-nuworld
+endif()
   src/main.c
   src/platform/audio.c
   src/platform/display.c
@@ -110,12 +112,12 @@ add_executable(crashwoc-nuworld
 nw_embed(crashwoc-nuworld nw_font_regular ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/AtkinsonHyperlegible-Regular.ttf)
 nw_embed(crashwoc-nuworld nw_font_bold ${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/AtkinsonHyperlegible-Bold.ttf)
 
-target_include_directories(crashwoc-nuworld PRIVATE src)
-target_compile_options(crashwoc-nuworld PRIVATE -Wall -Wextra $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
-target_link_libraries(crashwoc-nuworld PRIVATE nuworld_frontend nuworld_gfx nuworld_imgui nuworld_port SDL3::SDL3)
+target_include_directories(${NW_APP_TARGET} PRIVATE src)
+target_compile_options(${NW_APP_TARGET} PRIVATE -Wall -Wextra $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
+target_link_libraries(${NW_APP_TARGET} PRIVATE nuworld_frontend nuworld_gfx nuworld_imgui nuworld_port SDL3::SDL3)
 if(MINGW)
   # Keep the release a single .exe: libc++ (Dear ImGui) linked in, not libc++.dll.
-  target_link_options(crashwoc-nuworld PRIVATE -static-libstdc++)
+  target_link_options(${NW_APP_TARGET} PRIVATE -static-libstdc++)
 endif()
 
 # Checked at every build.
