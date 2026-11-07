@@ -2,18 +2,16 @@
   <img src="assets/branding/nuworld-icon.svg" width="144" alt="NuWorld">
 </p>
 
-<h1 align="center">CrashWOC: NuWorld</h1>
+<h1 align="center">CrashWOC: NuWorld Android</h1>
 
 <p align="center">
-  A native PC port of <i>Crash Bandicoot: The Wrath of Cortex</i> (PS2, PAL v1.03)
+  A native ANDROID port of <i>Crash Bandicoot: The Wrath of Cortex</i> (PS2, PAL v1.03)
 </p>
 
 <p align="center">
   <a href="#nuworld-first-startup">First startup</a> ·
   <a href="#building">Building</a> ·
-  <a href="#settings">Settings</a> ·
-  <a href="https://discord.gg/kmCPpW4KvJ">Discord</a> ·
-  <a href="https://github.com/denzi-gh/crashwoc-decomp-ps2">Decompilation</a>
+  <a href="#settings">Settings</a> 
 </p>
 
 <p align="center">
@@ -65,15 +63,6 @@ cd crashwoc-nuworld
 cmake --preset release
 cmake --build --preset release
 ```
-
-## Settings
-
-| Key | |
-|---|---|
-| F1 | Menu: video, audio, controls, game speed |
-| F2 | Crash's movement |
-| F11 | Fullscreen |
-| F12 | Screenshot |
 
 > [!NOTE]
 > The settings menu is a debug menu. A proper in-game menu comes with the first release.
