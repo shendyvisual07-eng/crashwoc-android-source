@@ -16,6 +16,15 @@
 #include "platform/paths.h"
 #include "platform/platform.h"
 #include "vfs/extract.h"
+#include "vfs/vfs.h"
+
+/* CLI options are parsed in all builds; the game runtime consumes these when enabled. */
+static const char *nw_run_level;
+static const char *nw_pad_script;
+static int nw_run_hz;
+static const char *nw_overlays[NW_VFS_OVERLAYS];
+static int nw_overlay_count;
+
 #ifdef NW_WITH_GAME
 #include "data/image.h"
 #include "frontend/controlpanel.h"
@@ -416,12 +425,6 @@ static char *nw_game_argv[] = { nw_game_arg0, NULL };
 #define NW_DUMP_MS 3600000             /* the watchdog of --dump */
 #define NW_LEVEL_CHECK_MS 600000       /* the watchdog of --boot-check with --level */
 #define NW_SETTINGS_SAVE_MS 1000       /* how long settings stay unchanged before they are saved */
-
-static const char *nw_run_level;  /* --level */
-static const char *nw_pad_script; /* --pad-script */
-static int nw_run_hz;             /* --hz, else the window's setting; 0: PAL's */
-static const char *nw_overlays[NW_VFS_OVERLAYS]; /* --overlay, in the order given: the later wins */
-static int nw_overlay_count;
 
 static void nw_overlay_conflict(void *user, const char *key)
 {
