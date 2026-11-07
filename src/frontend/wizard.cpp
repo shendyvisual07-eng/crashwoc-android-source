@@ -6,9 +6,9 @@
 
 #include "app.h"
 #include "frontend/ui.h"
-#include "frontend/settings.h"
 
 extern "C" {
+#include "frontend/settings.h"
 #include "frontend/import.h"
 #include "platform/paths.h"
 #include "vfs/extract.h"
