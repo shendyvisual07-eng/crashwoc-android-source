@@ -1,8 +1,8 @@
+import java.util.zip.ZipFile
+
 plugins {
     id "com.android.application"
 }
-
-import java.util.zip.ZipFile
 
 def sdlVersion = "3.4.16"
 def sdlArchive = layout.buildDirectory.file("downloads/SDL3-devel-${sdlVersion}-android.zip")
