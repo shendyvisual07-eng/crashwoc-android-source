@@ -465,32 +465,76 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
 {
     NwWizardResult result = NW_WIZARD_OPEN;
     const ImGuiViewport *vp = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(vp->WorkPos, ImGuiCond_Always);
-    ImGui::SetNextWindowSize(vp->WorkSize, ImGuiCond_Always);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 12.0f));
+    ImDrawList *bg = ImGui::GetBackgroundDrawList(vp);
+    const ImVec2 screen_min = vp->Pos;
+    const ImVec2 screen_max(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y);
+
+    /* Soft tropical dusk backdrop, drawn without external textures. */
+    bg->AddRectFilledMultiColor(screen_min, screen_max,
+        IM_COL32(8, 18, 43, 255), IM_COL32(20, 45, 79, 255),
+        IM_COL32(6, 15, 34, 255), IM_COL32(10, 27, 53, 255));
+    const float unit = SDL_min(vp->Size.x, vp->Size.y);
+    bg->AddCircleFilled(ImVec2(screen_max.x - unit * 0.15f, screen_min.y + unit * 0.17f),
+                        unit * 0.12f, IM_COL32(255, 160, 72, 24), 48);
+    bg->AddCircleFilled(ImVec2(screen_min.x + unit * 0.08f, screen_max.y - unit * 0.08f),
+                        unit * 0.22f, IM_COL32(31, 179, 154, 20), 48);
+    bg->AddCircleFilled(ImVec2(screen_max.x - unit * 0.04f, screen_max.y + unit * 0.08f),
+                        unit * 0.25f, IM_COL32(24, 105, 116, 28), 48);
+
+    /* Center the whole interface and keep a comfortable safe margin on short screens. */
+    const float margin_x = SDL_max(12.0f, vp->Size.x * 0.035f);
+    const float margin_y = SDL_max(8.0f, vp->Size.y * 0.045f);
+    const float max_width = 1440.0f;
+    const float width = SDL_min(max_width, vp->Size.x - margin_x * 2.0f);
+    const float height = SDL_max(220.0f, vp->Size.y - margin_y * 2.0f);
+    const ImVec2 pos(vp->Pos.x + (vp->Size.x - width) * 0.5f,
+                     vp->Pos.y + (vp->Size.y - height) * 0.5f);
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 20.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(18.0f, 14.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 15.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.085f, 0.15f, 0.86f));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.10f, 0.16f, 0.25f, 0.62f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.48f, 0.70f, 0.88f, 0.24f));
+
     ImGui::Begin("CRASH WOC CONTROL CENTER", NULL,
                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
-    ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.12f, 1.0f), "CRASH WOC");
+    ImDrawList *panel = ImGui::GetWindowDrawList();
+    const ImVec2 panel_min = ImGui::GetWindowPos();
+    const ImVec2 panel_max(panel_min.x + ImGui::GetWindowSize().x, panel_min.y + ImGui::GetWindowSize().y);
+    panel->AddRect(panel_min, panel_max, IM_COL32(124, 190, 231, 90), 20.0f, 0, 1.2f);
+    ImGui::TextColored(ImVec4(1.0f, 0.57f, 0.20f, 1.0f), "CRASH WOC");
     ImGui::SameLine();
     ImGui::TextDisabled("NUWORLD  /  ANDROID CONTROL CENTER");
     ImGui::Separator();
-    const float nav_width = SDL_max(150.0f, ImGui::GetContentRegionAvail().x * 0.25f);
+
+    const float available = ImGui::GetContentRegionAvail().x;
+    const float nav_width = SDL_max(126.0f, SDL_min(205.0f, available * 0.235f));
     ImGui::BeginChild("navigation", ImVec2(nav_width, 0), ImGuiChildFlags_Borders);
-    ImGui::TextUnformatted("MAIN MENU");
+    ImGui::TextDisabled("MENU");
     ImGui::Spacing();
-    if (ImGui::Selectable("  DISC IMPORT", w->section == 0)) w->section = 0;
-    if (ImGui::Selectable("  GRAPHICS", w->section == 1)) w->section = 1;
-    if (ImGui::Selectable("  CONTROLLER", w->section == 2)) w->section = 2;
-    if (ImGui::Selectable("  SYSTEM", w->section == 3)) w->section = 3;
-    ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 58.0f);
-    if (ImGui::Button("QUIT", ImVec2(-FLT_MIN, 0))) result = NW_WIZARD_QUIT;
+    const float nav_button_h = SDL_max(34.0f, ImGui::GetTextLineHeightWithSpacing() * 1.65f);
+    if (ImGui::Selectable("  DISC IMPORT", w->section == 0, 0, ImVec2(0, nav_button_h))) w->section = 0;
+    if (ImGui::Selectable("  GRAPHICS", w->section == 1, 0, ImVec2(0, nav_button_h))) w->section = 1;
+    if (ImGui::Selectable("  CONTROLLER", w->section == 2, 0, ImVec2(0, nav_button_h))) w->section = 2;
+    if (ImGui::Selectable("  SYSTEM", w->section == 3, 0, ImVec2(0, nav_button_h))) w->section = 3;
+    const float bottom_space = ImGui::GetContentRegionAvail().y;
+    if (bottom_space > 48.0f) ImGui::SetCursorPosY(ImGui::GetCursorPosY() + bottom_space - 42.0f);
+    if (ImGui::Button("QUIT", ImVec2(-FLT_MIN, 36.0f))) result = NW_WIZARD_QUIT;
     ImGui::EndChild();
-    ImGui::SameLine();
+
+    ImGui::SameLine(0.0f, 12.0f);
     ImGui::BeginChild("content", ImVec2(0, 0), ImGuiChildFlags_Borders);
+    ImGui::TextDisabled(w->section == 0 ? "FIRST-TIME SETUP" : "SETTINGS");
+    if (w->section == 1) ImGui::TextUnformatted("GRAPHICS & PERFORMANCE");
+    else if (w->section == 2) ImGui::TextUnformatted("CONTROLLER");
+    else if (w->section == 3) ImGui::TextUnformatted("SYSTEM INFORMATION");
+    else ImGui::TextUnformatted("GAME DISC");
+    ImGui::Separator();
     if (w->section == 0) {
-        ImGui::TextDisabled("FIRST-TIME SETUP");
         switch (w->page) {
         case NW_PAGE_PICK: result = nw_wizard_pick(w); break;
         case NW_PAGE_RUN: nw_wizard_run(w); break;
@@ -498,15 +542,11 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
         case NW_PAGE_FAILED: nw_wizard_failed(w); break;
         }
     } else {
-        ImGui::TextDisabled("SETTINGS");
-        if (w->section == 1) ImGui::TextUnformatted("GRAPHICS & PERFORMANCE");
-        else if (w->section == 2) ImGui::TextUnformatted("CONTROLLER");
-        else ImGui::TextUnformatted("SYSTEM INFORMATION");
-        ImGui::Separator();
         nw_wizard_settings(w);
     }
     ImGui::EndChild();
     ImGui::End();
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar(4);
     return result;
 }
