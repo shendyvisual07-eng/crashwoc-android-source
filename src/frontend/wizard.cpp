@@ -505,7 +505,7 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
     ImDrawList *panel = ImGui::GetWindowDrawList();
     const ImVec2 panel_min = ImGui::GetWindowPos();
     const ImVec2 panel_max(panel_min.x + ImGui::GetWindowSize().x, panel_min.y + ImGui::GetWindowSize().y);
-    panel->AddRect(panel_min, panel_max, IM_COL32(124, 190, 231, 90), 20.0f, ImDrawFlags_RoundCornersAll, 1.2f);
+    panel->AddRect(panel_min, panel_max, IM_COL32(124, 190, 231, 90), 20.0f, 1.2f, ImDrawFlags_RoundCornersAll);
     ImGui::TextColored(ImVec4(1.0f, 0.57f, 0.20f, 1.0f), "CRASH WOC");
     ImGui::SameLine();
     ImGui::TextDisabled("NUWORLD  /  ANDROID CONTROL CENTER");
