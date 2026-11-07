@@ -380,7 +380,7 @@ static void nw_wizard_graphics(NwWizard *w)
     static const char *const sample_names[] = { "Off", "2x", "4x", "8x" };
     NwSettings *s = &w->settings;
     int fps = s->fps == 0 ? 0 : s->fps == 30 ? 1 : s->fps == 60 ? 2 : s->fps == 90 ? 3 : s->fps == 120 ? 4 : 5;
-    const char *const fps_names[] = { "Display refresh", "30 FPS", "60 FPS", "90 FPS", "120 FPS", "Unlimited" };
+    const char *const fps_names[] = { "Display refresh", "30 FPS", "60 FPS", "90 FPS", "120 FPS", "1000 FPS (max)" };
     if (ImGui::BeginTable("graphics", 2, ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("setting", ImGuiTableColumnFlags_WidthStretch, 0.42f);
         ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch, 0.58f);
