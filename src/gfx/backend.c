@@ -964,7 +964,9 @@ static void nw_be_run(const NwPacket *p, NwBeSurf *back)
     nw_vu_alpha_writes(true);
     glEnable(GL_DEPTH_TEST);
 #if !defined(__ANDROID__)
+#if !defined(__ANDROID__)
     glPolygonMode(GL_FRONT_AND_BACK, nw_be.wireframe ? GL_LINE : GL_FILL);
+#endif
 #endif
     nw_be_rects(p);
     nw_be_verts(p);
