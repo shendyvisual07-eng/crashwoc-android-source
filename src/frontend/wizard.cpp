@@ -129,6 +129,7 @@ NwWizard *nw_wizard_create(SDL_Window *window, const char *root)
         return NULL;
     }
     w->window = window;
+    w->bind_target = -1;
     w->root = SDL_strdup(root);
     w->import_dir = nw_paths_dir(root, NW_PATHS_IMPORT, false);
     w->dialog_event = SDL_RegisterEvents(1);
