@@ -963,7 +963,9 @@ static void nw_be_run(const NwPacket *p, NwBeSurf *back)
     nw_be.alpha = true;
     nw_vu_alpha_writes(true);
     glEnable(GL_DEPTH_TEST);
+#if !defined(__ANDROID__)
     glPolygonMode(GL_FRONT_AND_BACK, nw_be.wireframe ? GL_LINE : GL_FILL);
+#endif
     nw_be_rects(p);
     nw_be_verts(p);
     nw_be_ptls(p);
@@ -1016,7 +1018,9 @@ static void nw_be_run(const NwPacket *p, NwBeSurf *back)
             break;
         }
     }
+#if !defined(__ANDROID__)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+#endif
     nw_be_resolve(back);
     NwBeSurf *front = nw_be_surf(NW_SURF_FRONT, back->tw, back->th);
     if (front) {
