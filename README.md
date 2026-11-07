@@ -1,86 +1,64 @@
-<p align="center">
-  <img src="assets/branding/nuworld-icon.svg" width="144" alt="NuWorld">
-</p>
+# crashwoc-android
 
-<h1 align="center">CrashWOC: NuWorld Android</h1>
+Unofficial Android port of *Crash Bandicoot: The Wrath of Cortex*.
 
-<p align="center">
-  A native ANDROID port of <i>Crash Bandicoot: The Wrath of Cortex</i> (PS2, PAL v1.03)
-</p>
+> ⚠️ This project is not affiliated with, endorsed by, or sponsored by
+> Activision, Universal Interactive, or any rights holder. All trademarks
+> belong to their respective owners.
 
-<p align="center">
-  <a href="#nuworld-first-startup">First startup</a> ·
-  <a href="#building">Building</a> ·
-  <a href="#settings">Settings</a> 
-</p>
+## About
 
-<p align="center">
-  <a href="https://github.com/denzi-gh/crashwoc-nuworld/actions/workflows/build.yml"><img src="https://github.com/denzi-gh/crashwoc-nuworld/actions/workflows/build.yml/badge.svg" alt="build"></a>
-  <a href="https://decomp.dev/denzi-gh/crashwoc-decomp-ps2"><img src="https://decomp.dev/denzi-gh/crashwoc-decomp-ps2.svg?mode=shield&label=decompiled" alt="decompiled"></a>
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational" alt="platform">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/denzi-gh/crashwoc-nuworld" alt="license"></a>
-  <a href="https://discord.gg/kmCPpW4KvJ"><img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="discord"></a>
-</p>
+crashwoc-android brings *The Wrath of Cortex* to Android devices. The goal
+is a playable, well-performing port with touch and gamepad support.
 
----
+## Features
 
-NuWorld is not an emulator. It runs the game's own code, rebuilt from the
-[decompilation](https://github.com/denzi-gh/crashwoc-decomp-ps2), natively on PC. It contains no game data: you
-need your own copy of the game (PAL, SLES-50386, v1.03).
+- Runs natively on Android ([min. Android version])
+- Touch controls and Bluetooth/USB gamepad support
+- [OpenGL ES / Vulkan] renderer
+- [Save data support, resolution scaling, etc.]
 
-> [!WARNING]
-> NuWorld is **not** meant to be played yet, even though most things already work. The first release will be the
-> movement beta. Issues and pull requests are closed until then.
+## Requirements
 
-## NuWorld Features
+- Android [version] or newer
+- A device with [ARM64 / ARMv7] architecture
+- **Your own copy of the original game files.** This repository does NOT
+  include or distribute any copyrighted game assets.
 
-- 50 or 60 Hz, any aspect ratio, frame interpolation
-- Window, fullscreen and borderless, resolution scale, MSAA
-- Remappable gamepad and keyboard, rumble, button prompts
-- Readable saves, import of PS2 and PCSX2 saves
-- *many Quality of Life changes and additions*
-- **new native Gameplay features**
+## Installation
 
-## NuWorld first startup
+1. Download the latest APK from the [Releases](../../releases) page.
+2. Install the APK on your device.
+3. Copy your game files to `[path on device]`.
+4. Launch the app.
 
-On the first start NuWorld asks for your disc image (`.iso`, or `.bin`/`.cue`), checks it and imports it.
+## Building from Source
 
-> [!IMPORTANT]
-> For now the game starts with `--boot`:
->
-> ```sh
-> ./build/release/crashwoc-nuworld --boot
-> ```
-
-## Building
-
-Needs Clang, CMake 3.25+, Ninja and Python 3.11+ (`python -m pip install -r tools/requirements.txt`). On Windows,
-use an MSYS2 CLANG64 shell.
-
-```sh
-git clone --recursive https://github.com/denzi-gh/crashwoc-nuworld.git
-cd crashwoc-nuworld
-cmake --preset release
-cmake --build --preset release
+```bash
+git clone https://github.com/[username]/crashwoc-android.git
+cd crashwoc-android
+./gradlew assembleRelease
 ```
 
-> [!NOTE]
-> The settings menu is a debug menu. A proper in-game menu comes with the first release.
+Requirements: Android Studio, Android NDK [version], CMake [version].
 
-## Discord
+## Status
 
-Updates on NuWorld are posted on [Discord](https://discord.gg/kmCPpW4KvJ).
+- [x] [Completed feature]
+- [ ] [Work in progress]
+- [ ] [Planned feature]
 
-## Credits
+## Contributing
 
-- [Kenney](https://kenney.nl) Input Prompts (CC0)
-- Atkinson Hyperlegible (SIL OFL)
-- [SDL3](https://libsdl.org),
-- [Dear ImGui](https://github.com/ocornut/imgui)
-- SPU2 interpolation table from [PCSX2](https://pcsx2.net).
+Issues and pull requests are welcome. Please open an issue first to
+discuss major changes.
 
-NuWorld is a fan project and not affiliated with Activision or Traveller's Tales.
+## Legal
+
+This is a fan-made, non-commercial project for educational purposes.
+No copyrighted assets are included. You must own a legitimate copy of the
+game to use this software.
 
 ## License
 
-GPL-3.0, see [LICENSE](LICENSE).
+[Choose a license, e.g. MIT / GPL-3.0] — see [LICENSE](LICENSE).
