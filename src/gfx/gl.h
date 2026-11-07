@@ -18,7 +18,11 @@ typedef unsigned int GLuint;
 typedef int GLint;
 typedef int GLsizei;
 typedef float GLfloat;
+#if defined(__ANDROID__)
+typedef float GLdouble; /* GLES exposes glClearDepthf rather than glClearDepth. */
+#else
 typedef double GLdouble;
+#endif
 typedef unsigned char GLubyte;
 typedef unsigned char GLboolean;
 typedef char GLchar;
