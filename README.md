@@ -44,8 +44,8 @@ Requirements: Android Studio, Android NDK [version], CMake [version].
 
 ## Status
 
-- [x] [Completed feature]
-- [ ] [Work in progress]
+- [ ] [Completed feature]
+- [x] [Work in progress]
 - [ ] [Planned feature]
 
 ## Contributing
