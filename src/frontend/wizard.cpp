@@ -6,6 +6,7 @@
 
 #include "app.h"
 #include "frontend/ui.h"
+#include "frontend/settings.h"
 
 extern "C" {
 #include "frontend/import.h"
@@ -35,6 +36,9 @@ struct NwWizard {
     Uint64 scanned;  /* SDL_GetTicks of the last scan, 0 = never */
     char notice[512];
     char error[512];
+    NwSettings settings;
+    int section;
+    bool settings_dirty;
 };
 
 static const SDL_DialogFileFilter nw_wizard_filters[] = {
@@ -126,6 +130,10 @@ NwWizard *nw_wizard_create(SDL_Window *window, const char *root)
     w->import_dir = nw_paths_dir(root, NW_PATHS_IMPORT, false);
     w->dialog_event = SDL_RegisterEvents(1);
     w->had_disc = nw_extract_has_disc(root);
+    nw_settings_defaults(&w->settings);
+    if (!nw_settings_load(&w->settings, root)) {
+        SDL_ClearError(); /* a first launch has no settings file yet */
+    }
     if (!w->root || !w->import_dir) {
         nw_wizard_destroy(w);
         return NULL;
@@ -363,36 +371,142 @@ static void nw_wizard_failed(NwWizard *w)
     }
 }
 
+static void nw_wizard_graphics(NwWizard *w)
+{
+    static const char *const vsyncs[] = { "Off", "On", "Adaptive" };
+    static const char *const filters[] = { "Retail", "Nearest", "Bilinear" };
+    static const char *const scales[] = { "Auto", "1x (PS2)", "2x", "3x", "4x", "5x", "6x", "7x", "8x" };
+    static const int samples[] = { 0, 2, 4, 8 };
+    static const char *const sample_names[] = { "Off", "2x", "4x", "8x" };
+    NwSettings *s = &w->settings;
+    int fps = s->fps == 0 ? 0 : s->fps == 30 ? 1 : s->fps == 60 ? 2 : s->fps == 90 ? 3 : s->fps == 120 ? 4 : 5;
+    const char *const fps_names[] = { "Display refresh", "30 FPS", "60 FPS", "90 FPS", "120 FPS", "Unlimited" };
+    if (ImGui::BeginTable("graphics", 2, ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("setting", ImGuiTableColumnFlags_WidthStretch, 0.42f);
+        ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch, 0.58f);
+        ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextUnformatted("FPS limit");
+        ImGui::TableNextColumn();
+        if (ImGui::Combo("##fps", &fps, fps_names, (int)SDL_arraysize(fps_names))) {
+            s->fps = fps == 0 ? 0 : fps == 5 ? 1000 : fps == 1 ? 30 : fps == 2 ? 60 : fps == 3 ? 90 : 120;
+            w->settings_dirty = true;
+        }
+        ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextUnformatted("VSync");
+        ImGui::TableNextColumn();
+        int vsync = (int)s->vsync;
+        if (ImGui::Combo("##vsync", &vsync, vsyncs, NW_VSYNC_MODES)) { s->vsync = (NwVsync)vsync; w->settings_dirty = true; }
+        ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextUnformatted("Internal resolution");
+        ImGui::TableNextColumn();
+        if (ImGui::Combo("##scale", &s->scale, scales, (int)SDL_arraysize(scales))) w->settings_dirty = true;
+        ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextUnformatted("MSAA");
+        ImGui::TableNextColumn();
+        int msaa = 0; while (msaa < 3 && samples[msaa + 1] <= s->msaa) msaa++;
+        if (ImGui::Combo("##msaa", &msaa, sample_names, 4)) { s->msaa = samples[msaa]; w->settings_dirty = true; }
+        ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextUnformatted("Texture filter");
+        ImGui::TableNextColumn();
+        int filter = (int)s->filter;
+        if (ImGui::Combo("##filter", &filter, filters, NW_FILTERS)) { s->filter = (NwTexFilter)filter; w->settings_dirty = true; }
+        ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextUnformatted("Frame interpolation");
+        ImGui::TableNextColumn();
+        if (ImGui::Checkbox("##interp", &s->interpolation)) w->settings_dirty = true;
+        ImGui::EndTable();
+    }
+    ImGui::TextDisabled("Some graphics options apply when the game renderer starts.");
+}
+
+static void nw_wizard_controller(NwWizard *w)
+{
+    NwControls *c = &w->settings.controls;
+    static const char *const prompt_names[] = { "Auto", "Xbox", "PlayStation", "Nintendo", "Steam Deck", "Keyboard" };
+    ImGui::TextUnformatted("TOUCH CONTROLS");
+    ImGui::TextWrapped("The existing on-screen touch controls remain enabled. Their layout is not changed here.");
+    ImGui::SeparatorText("GAMEPAD");
+    if (ImGui::SliderInt("Left stick deadzone", &c->left_deadzone, 0, 90, "%d%%")) w->settings_dirty = true;
+    if (ImGui::SliderInt("Right stick deadzone", &c->right_deadzone, 0, 90, "%d%%")) w->settings_dirty = true;
+    if (ImGui::SliderInt("Trigger threshold", &c->trigger_press, 1, 100, "%d%%")) w->settings_dirty = true;
+    if (ImGui::SliderInt("Rumble strength", &c->rumble, 0, 100, "%d%%")) w->settings_dirty = true;
+    int prompts = (int)c->prompts;
+    if (ImGui::Combo("Button prompts", &prompts, prompt_names, NW_PROMPT_STYLES)) {
+        c->prompts = (NwPromptStyle)prompts;
+        w->settings_dirty = true;
+    }
+}
+
+static void nw_wizard_settings(NwWizard *w)
+{
+    if (w->section == 1) nw_wizard_graphics(w);
+    else if (w->section == 2) nw_wizard_controller(w);
+    else {
+        ImGui::TextUnformatted("SYSTEM");
+        ImGui::Separator();
+        ImGui::TextWrapped("CrashWOC NuWorld Android preview");
+        ImGui::TextWrapped("Settings are stored in this app's private data folder.");
+        ImGui::TextWrapped("The game requires your own PAL v1.03 disc image (SLES-50386).");
+    }
+    ImGui::Spacing();
+    if (w->settings_dirty) {
+        ImGui::TextColored(nw_wizard_warn, "You have unsaved changes.");
+    } else {
+        ImGui::TextDisabled("All settings are saved.");
+    }
+    if (ImGui::Button("Save settings")) {
+        if (nw_settings_save(&w->settings, w->root)) {
+            w->settings_dirty = false;
+            SDL_strlcpy(w->notice, "Settings saved.", sizeof(w->notice));
+        } else {
+            SDL_strlcpy(w->error, SDL_GetError(), sizeof(w->error));
+        }
+    }
+    if (w->notice[0]) ImGui::SameLine(); 
+    if (w->notice[0]) ImGui::TextColored(nw_wizard_ok, "%s", w->notice);
+    if (w->error[0]) ImGui::TextColored(nw_wizard_bad, "%s", w->error);
+}
+
 NwWizardResult nw_wizard_draw(NwWizard *w)
 {
     NwWizardResult result = NW_WIZARD_OPEN;
     const ImGuiViewport *vp = ImGui::GetMainViewport();
-    float scale = ImGui::GetStyle().FontScaleDpi;
-    float margin = 16.0f * scale;
-    float width = SDL_max(SDL_min(vp->WorkSize.x - 2.0f * margin, 760.0f * scale), 240.0f);
-    float height = SDL_max(vp->WorkSize.y - 2.0f * margin, 120.0f);
-
-    ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSizeConstraints(ImVec2(width, 0.0f), ImVec2(width, height));
-    ImGui::Begin(NW_APP_NAME, NULL,
+    ImGui::SetNextWindowPos(vp->WorkPos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(vp->WorkSize, ImGuiCond_Always);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 12.0f));
+    ImGui::Begin("CRASH WOC CONTROL CENTER", NULL,
                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
-                     ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::TextDisabled(NW_APP_NAME " - first-time setup");
-    switch (w->page) {
-    case NW_PAGE_PICK:
-        result = nw_wizard_pick(w);
-        break;
-    case NW_PAGE_RUN:
-        nw_wizard_run(w);
-        break;
-    case NW_PAGE_DONE:
-        result = nw_wizard_done(w);
-        break;
-    case NW_PAGE_FAILED:
-        nw_wizard_failed(w);
-        break;
+                 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.12f, 1.0f), "CRASH WOC");
+    ImGui::SameLine();
+    ImGui::TextDisabled("NUWORLD  /  ANDROID CONTROL CENTER");
+    ImGui::Separator();
+    const float nav_width = SDL_max(150.0f, ImGui::GetContentRegionAvail().x * 0.25f);
+    ImGui::BeginChild("navigation", ImVec2(nav_width, 0), ImGuiChildFlags_Borders);
+    ImGui::TextUnformatted("MAIN MENU");
+    ImGui::Spacing();
+    if (ImGui::Selectable("  DISC IMPORT", w->section == 0)) w->section = 0;
+    if (ImGui::Selectable("  GRAPHICS", w->section == 1)) w->section = 1;
+    if (ImGui::Selectable("  CONTROLLER", w->section == 2)) w->section = 2;
+    if (ImGui::Selectable("  SYSTEM", w->section == 3)) w->section = 3;
+    ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 58.0f);
+    if (ImGui::Button("QUIT", ImVec2(-FLT_MIN, 0))) result = NW_WIZARD_QUIT;
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("content", ImVec2(0, 0), ImGuiChildFlags_Borders);
+    if (w->section == 0) {
+        ImGui::TextDisabled("FIRST-TIME SETUP");
+        switch (w->page) {
+        case NW_PAGE_PICK: result = nw_wizard_pick(w); break;
+        case NW_PAGE_RUN: nw_wizard_run(w); break;
+        case NW_PAGE_DONE: result = nw_wizard_done(w); break;
+        case NW_PAGE_FAILED: nw_wizard_failed(w); break;
+        }
+    } else {
+        ImGui::TextDisabled("SETTINGS");
+        if (w->section == 1) ImGui::TextUnformatted("GRAPHICS & PERFORMANCE");
+        else if (w->section == 2) ImGui::TextUnformatted("CONTROLLER");
+        else ImGui::TextUnformatted("SYSTEM INFORMATION");
+        ImGui::Separator();
+        nw_wizard_settings(w);
     }
+    ImGui::EndChild();
     ImGui::End();
+    ImGui::PopStyleVar(2);
     return result;
 }
