@@ -53,11 +53,13 @@ The upstream README also states that NuWorld is not yet intended for normal play
 
 - [x] Dedicated branch created: `android/port-foundation`.
 - [x] Initial source/build audit recorded.
-- [x] Android Gradle project scaffold, SDL3 AAR integration, custom SDLActivity, and an isolated native SDL smoke-test target committed (build still pending).
+- [x] Android Gradle project scaffold, SDL3 AAR integration, custom SDLActivity, and isolated native SDL target.
+- [x] Android CI debug APK build and artifact upload verified on GitHub Actions.
+- [x] Android preview verifies app-private `import/` and `saves/` directories and displays a multitouch input test overlay.
 - [ ] Android-compatible renderer.
 - [ ] SAF import and app-private storage integration.
 - [ ] Touch controls and lifecycle handling.
-- [ ] Successful Android CI build (workflow added; result not yet verified).
+- [x] Successful Android CI build and APK artifact upload.
 - [ ] Device testing and playable game validation.
 
 ## Phase A implementation notes
@@ -66,6 +68,12 @@ The upstream README also states that NuWorld is not yet intended for normal play
 - Gradle downloads the official SDL 3.4.16 Android development archive and extracts its AAR; SDL is linked through Prefab as `SDL3::SDL3`.
 - The Android CMake path returns early with a small `main` shared library. This intentionally avoids compiling the desktop-only OpenGL 3.3 renderer before its GLES port exists.
 - `.github/workflows/android.yml` builds a debug APK and uploads it as a workflow artifact when the branch is pushed.
+
+## Phase B groundwork
+
+- The Android-only SDL preview creates the app-private data root with `import/` and `saves/` directories using `SDL_GetPrefPath`.
+- The preview draws on-screen D-pad and action-button test zones and reports active touch/finger state. These are diagnostics only; they are not yet connected to NuWorld gameplay actions.
+- The production renderer remains desktop OpenGL 3.3. A proper GLES 3 renderer port and frontend integration are still required before the game can boot.
 
 ## Important limitation
 
