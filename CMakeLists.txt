@@ -108,6 +108,7 @@ add_library(${NW_APP_TARGET} ${NW_APP_LIBRARY_TYPE}
   src/platform/audio.c
   src/platform/display.c
   src/platform/log.c
+  src/platform/input.c
   src/platform/platform.c
   src/gfx/gl.c
   src/gfx/vu.c
