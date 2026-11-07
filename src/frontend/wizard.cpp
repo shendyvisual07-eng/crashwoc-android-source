@@ -4,6 +4,41 @@
 
 #include "imgui.h"
 
+#if defined(__ANDROID__)
+#include <jni.h>
+#include <SDL3/SDL_system.h>
+
+static bool nw_wizard_android_disc_picker(const char *target_dir, bool folder)
+{
+    JNIEnv *env = (JNIEnv *)SDL_GetAndroidJNIEnv();
+    jobject activity = (jobject)SDL_GetAndroidActivity();
+    if (!env || !activity) {
+        SDL_SetError("Android activity is unavailable");
+        return false;
+    }
+
+    jclass cls = env->GetObjectClass(activity);
+    jmethodID method = cls ? env->GetMethodID(cls, "openDiscPicker", "(Ljava/lang/String;Z)V") : NULL;
+    jstring path = method ? env->NewStringUTF(target_dir) : NULL;
+    if (method && path) {
+        env->CallVoidMethod(activity, method, path, folder ? JNI_TRUE : JNI_FALSE);
+    }
+    const bool failed = !method || !path || env->ExceptionCheck();
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
+    if (path) env->DeleteLocalRef(path);
+    if (cls) env->DeleteLocalRef(cls);
+    env->DeleteLocalRef(activity);
+    if (failed) {
+        SDL_SetError("Could not open Android Storage Access Framework picker");
+        return false;
+    }
+    return true;
+}
+#endif
+
 #include "app.h"
 #include "frontend/ui.h"
 
@@ -243,6 +278,20 @@ static NwWizardResult nw_wizard_pick(NwWizard *w)
     }
 
     nw_wizard_heading("Disc image");
+#if defined(__ANDROID__)
+    if (ImGui::Button("Choose ISO file")) {
+        if (!nw_wizard_android_disc_picker(w->import_dir, false)) {
+            SDL_strlcpy(w->error, SDL_GetError(), sizeof(w->error));
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Import BIN/CUE folder")) {
+        if (!nw_wizard_android_disc_picker(w->import_dir, true)) {
+            SDL_strlcpy(w->error, SDL_GetError(), sizeof(w->error));
+        }
+    }
+    ImGui::TextDisabled("Android copies selected files into the private import folder.");
+#else
     ImGui::BeginDisabled(!w->dialog_event);
     if (ImGui::Button("Choose file...")) {
         SDL_ShowOpenFileDialog(nw_wizard_picked, (void *)(uintptr_t)w->dialog_event, w->window, nw_wizard_filters,
@@ -252,6 +301,7 @@ static NwWizardResult nw_wizard_pick(NwWizard *w)
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("or drop it here");
+#endif
 
     nw_wizard_heading("Import folder");
     ImGui::TextWrapped("Or copy it into this folder and pick it below (Steam Deck: use Desktop Mode).");
