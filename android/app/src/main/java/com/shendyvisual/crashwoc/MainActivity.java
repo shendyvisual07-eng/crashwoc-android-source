@@ -83,7 +83,7 @@ public final class MainActivity extends SDLActivity {
 
     private void copySingleDisc(Uri uri, String targetPath) {
         String name = queryDisplayName(uri);
-        if (!isDiscImage(name)) {
+        if (name == null || !name.toLowerCase(Locale.ROOT).endsWith(".iso")) {
             showToast("Choose an .iso image, or use the folder option for .bin/.cue.");
             return;
         }
