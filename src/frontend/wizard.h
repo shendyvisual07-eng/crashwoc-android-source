@@ -12,6 +12,7 @@ extern "C" {
 typedef enum NwWizardResult {
     NW_WIZARD_OPEN,   /* keep drawing */
     NW_WIZARD_CLOSED, /* a disc is imported, go on */
+    NW_WIZARD_START_GAME, /* start the imported game */
     NW_WIZARD_QUIT,
 } NwWizardResult;
 
