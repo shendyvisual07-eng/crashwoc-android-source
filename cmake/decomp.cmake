@@ -140,6 +140,12 @@ add_library(nuworld_decomp OBJECT ${nw_sources})
 add_dependencies(nuworld_decomp nuworld_gen)
 target_include_directories(nuworld_decomp PRIVATE ${nw_decomp_includes})
 target_compile_options(nuworld_decomp PRIVATE ${nw_decomp_flags})
+# Android's NDK injects -Werror=format-security globally. The retail decomp has
+# legacy printf(string) calls; keep the diagnostic visible without making this
+# third-party source warning fatal while the Android-specific port is developed.
+if(ANDROID)
+  target_compile_options(nuworld_decomp PRIVATE -Wno-error=format-security)
+endif()
 
 # The converters include every decomp header, so they build with the decomp flags.
 set(nw_data_sources src/data/convert.c src/data/elf.c src/data/image.c src/data/xhooks.c ${nw_converters})
