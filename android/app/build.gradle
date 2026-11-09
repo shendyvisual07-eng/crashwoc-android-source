@@ -14,19 +14,38 @@ tasks.register("prepareSDL3Aar") {
         def archive = sdlArchive.get().asFile
         if (!archive.exists() || archive.length() == 0L) {
             archive.parentFile.mkdirs()
-            def downloadUrl = "https://github.com/libsdl-org/SDL/releases/download/release-${sdlVersion}/SDL3-devel-${sdlVersion}-android.zip"
-            // GitHub release downloads can intermittently return 502/504 in hosted CI.
-            // Retry transient network failures and fail only after all attempts are exhausted.
-            def result = providers.exec {
-                commandLine "curl", "--fail", "--location", "--retry", "5",
-                    "--retry-all-errors", "--retry-delay", "5",
-                    "--connect-timeout", "30", "--max-time", "600",
-                    "--output", archive.absolutePath, downloadUrl
-                ignoreExitValue = true
+            def releaseUrl = "https://github.com/libsdl-org/SDL/releases/download/release-${sdlVersion}/SDL3-devel-${sdlVersion}-android.zip"
+            // GitHub release CDN can intermittently return 502/504 in hosted CI.
+            // Try the browser URL first, then GitHub's release-asset API endpoint.
+            def downloadAttempts = [
+                [url: releaseUrl, headers: []],
+                [url: "https://api.github.com/repos/libsdl-org/SDL/releases/assets/541452351",
+                 headers: ["-H", "Accept: application/octet-stream", "-H", "X-GitHub-Api-Version: 2022-11-28"]]
+            ]
+            def downloaded = false
+            def errors = []
+            downloadAttempts.each { attempt ->
+                if (!downloaded) {
+                    archive.delete()
+                    def args = ["curl", "--fail", "--show-error", "--location",
+                        "--retry", "5", "--retry-all-errors", "--retry-delay", "5",
+                        "--connect-timeout", "30", "--max-time", "600"]
+                    args.addAll(attempt.headers)
+                    args.addAll(["--output", archive.absolutePath, attempt.url])
+                    def result = providers.exec {
+                        commandLine args
+                        ignoreExitValue = true
+                    }
+                    downloaded = result.result.get().exitValue == 0 &&
+                        archive.exists() && archive.length() > 1000000L
+                    if (!downloaded) {
+                        errors.add(attempt.url)
+                    }
+                }
             }
-            if (result.result.get().exitValue != 0 || !archive.exists() || archive.length() == 0L) {
+            if (!downloaded) {
                 archive.delete()
-                throw new GradleException("Failed to download SDL3 Android archive after retries: ${downloadUrl}")
+                throw new GradleException("Failed to download SDL3 Android archive from all sources: ${errors.join(', ')}")
             }
         }
         ZipFile zip = new ZipFile(archive)
