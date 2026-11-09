@@ -12,10 +12,21 @@ tasks.register("prepareSDL3Aar") {
     outputs.file(sdlAar)
     doLast {
         def archive = sdlArchive.get().asFile
-        if (!archive.exists()) {
+        if (!archive.exists() || archive.length() == 0L) {
             archive.parentFile.mkdirs()
-            new URL("https://github.com/libsdl-org/SDL/releases/download/release-${sdlVersion}/SDL3-devel-${sdlVersion}-android.zip").withInputStream { input ->
-                archive.withOutputStream { output -> output << input }
+            def downloadUrl = "https://github.com/libsdl-org/SDL/releases/download/release-${sdlVersion}/SDL3-devel-${sdlVersion}-android.zip"
+            // GitHub release downloads can intermittently return 502/504 in hosted CI.
+            // Retry transient network failures and fail only after all attempts are exhausted.
+            def result = providers.exec {
+                commandLine "curl", "--fail", "--location", "--retry", "5",
+                    "--retry-all-errors", "--retry-delay", "5",
+                    "--connect-timeout", "30", "--max-time", "600",
+                    "--output", archive.absolutePath, downloadUrl
+                ignoreExitValue = true
+            }
+            if (result.result.get().exitValue != 0 || !archive.exists() || archive.length() == 0L) {
+                archive.delete()
+                throw new GradleException("Failed to download SDL3 Android archive after retries: ${downloadUrl}")
             }
         }
         ZipFile zip = new ZipFile(archive)
