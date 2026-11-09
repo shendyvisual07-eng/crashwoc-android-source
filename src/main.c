@@ -1538,8 +1538,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* First run (no imported disc) or --setup: the wizard. */
+    /* Android keeps the control center available after import. Until the game runtime is
+       wired to the Android activity, closing the wizard would leave the GL surface blank. */
+#if defined(__ANDROID__)
+    NwWizard *wizard = nw_wizard_create(platform.window, root);
+#else
+    /* Desktop: first run (no imported disc) or --setup opens the wizard. */
     NwWizard *wizard = setup || !nw_extract_has_disc(root) ? nw_wizard_create(platform.window, root) : NULL;
+#endif
     bool running = true;
     int frames = 0;
     while (running) {
