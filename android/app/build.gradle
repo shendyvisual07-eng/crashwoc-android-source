@@ -52,7 +52,7 @@ android {
         }
         externalNativeBuild {
             cmake {
-                arguments "-DANDROID_STL=c++_shared", "-DNUWORLD_SYSTEM_SDL3=ON", "-DNUWORLD_DECOMP=OFF", "-DNUWORLD_TESTS=OFF"
+                arguments "-DANDROID_STL=c++_shared", "-DNUWORLD_SYSTEM_SDL3=ON", "-DNUWORLD_DECOMP=ON", "-DNUWORLD_TESTS=OFF"
             }
         }
     }
