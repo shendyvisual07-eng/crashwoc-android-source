@@ -12,5 +12,15 @@
  * __divdi3 (src/shim/libc.c). After nu_libc.h, so the host headers keep theirs. */
 #define strlwr nw_strlwr
 #define __divdi3 nw_divdi3
+/* Preserve the destination's compile-time size at the original call site.
+ * The shim logs small buffers, then delegates to Android's FORTIFY builtin. */
+#if defined(__ANDROID__)
+#include <stddef.h>
+#include <stdarg.h>
+int nw_vsprintf_diag(char *dst, size_t dst_size, const char *fmt, va_list ap,
+                     const char *file, int line);
+#define vsprintf(dst, fmt, ap) \
+    nw_vsprintf_diag((dst), __builtin_object_size((dst), 0), (fmt), (ap), __FILE__, __LINE__)
+#endif
 
 #endif
