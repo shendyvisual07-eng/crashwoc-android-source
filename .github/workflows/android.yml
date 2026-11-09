@@ -25,12 +25,31 @@ jobs:
           packages: platform-tools
       - name: Install Android build tools
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358" "cmake;3.30.3"
-      - name: Install Gradle 8.9 from distribution host
+      - name: Install verified Gradle 8.9 distribution
+        env:
+          GRADLE_SHA256: d725d707bfabd4dfdc958c624003b3c80accc03f7037b5122c4b1d0ef15cecab
         run: |
-          curl --fail --location --retry 5 --retry-all-errors --retry-delay 5 \
-            https://downloads.gradle.org/distributions/gradle-8.9-bin.zip \
-            --output /tmp/gradle-8.9-bin.zip
-          unzip -q /tmp/gradle-8.9-bin.zip -d /opt
+          set -euo pipefail
+          archive=/tmp/gradle-8.9-bin.zip
+          rm -f "$archive"
+
+          # Prefer the Huawei mirror because the official distribution host
+          # repeatedly returned HTTP 504 from the GitHub-hosted runner.
+          if ! curl --fail --location --retry 3 --retry-all-errors --retry-delay 4 \
+              --connect-timeout 30 --max-time 900 \
+              https://repo.huaweicloud.com/gradle/gradle-8.9-bin.zip \
+              --output "$archive"; then
+            rm -f "$archive"
+            echo "Huawei mirror failed; trying the official Gradle host once more."
+            curl --fail --location --retry 2 --retry-all-errors --retry-delay 5 \
+              --connect-timeout 30 --max-time 900 \
+              https://services.gradle.org/distributions/gradle-8.9-bin.zip \
+              --output "$archive"
+          fi
+
+          echo "$GRADLE_SHA256  $archive" | sha256sum --check --status
+          unzip -q "$archive" -d /opt
+          test -x /opt/gradle-8.9/bin/gradle
           echo "/opt/gradle-8.9/bin" >> "$GITHUB_PATH"
       - name: Build debug APK
         working-directory: android
