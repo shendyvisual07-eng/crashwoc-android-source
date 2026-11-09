@@ -170,6 +170,11 @@ NwWizard *nw_wizard_create(SDL_Window *window, const char *root)
     w->import_dir = nw_paths_dir(root, NW_PATHS_IMPORT, false);
     w->dialog_event = SDL_RegisterEvents(1);
     w->had_disc = nw_extract_has_disc(root);
+#if defined(__ANDROID__)
+    if (w->had_disc) {
+        w->page = NW_PAGE_READY;
+    }
+#endif
     nw_settings_defaults(&w->settings);
     if (!nw_settings_load(&w->settings, root)) {
         SDL_ClearError(); /* a first launch has no settings file yet */
@@ -424,10 +429,15 @@ static void nw_wizard_ready(NwWizard *w)
     nw_wizard_title("Disc ready");
     nw_wizard_wrapped(nw_wizard_ok, "Your PAL v" NW_DISC_VER " game data has been imported and verified.");
     ImGui::Spacing();
-    ImGui::TextWrapped("The Android build currently contains the setup and import tools, but the NuWorld gameplay runtime is not enabled yet. The blank screen after Continue was caused by leaving the setup wizard without a game runtime to draw.");
-    ImGui::Spacing();
     ImGui::TextWrapped("Your imported game data is safe. You do not need to import the disc again.");
     ImGui::Spacing();
+#if defined(__ANDROID__)
+    ImGui::BeginDisabled();
+    ImGui::Button("START GAME", ImVec2(-FLT_MIN, 48.0f));
+    ImGui::EndDisabled();
+    ImGui::TextWrapped("Gameplay is not available in this Android preview yet. The game runtime must be integrated before Start Game can be enabled.");
+    ImGui::Spacing();
+#endif
     if (ImGui::Button("Back to Control Center")) {
         w->section = 1;
     }
@@ -706,7 +716,7 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
     if (ImGui::Selectable("  SYSTEM", w->section == 3, 0, ImVec2(0, nav_button_h))) w->section = 3;
     const float bottom_space = ImGui::GetContentRegionAvail().y;
     if (bottom_space > 48.0f) ImGui::SetCursorPosY(ImGui::GetCursorPosY() + bottom_space - 42.0f);
-    if (ImGui::Button("QUIT", ImVec2(-FLT_MIN, 36.0f))) result = NW_WIZARD_QUIT;
+    if (ImGui::Button("EXIT APP", ImVec2(-FLT_MIN, 40.0f))) result = NW_WIZARD_QUIT;
     ImGui::EndChild();
 
     ImGui::SameLine(0.0f, 12.0f);
