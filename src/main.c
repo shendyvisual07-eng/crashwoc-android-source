@@ -609,32 +609,39 @@ static int nw_boot_check(const char *data_dir, int vblanks, int loads, NwClockMo
     return nw_boot_exit(reached && state == NW_GAME_PARKED ? 0 : 1, parked);
 }
 
-static bool nw_window_open(NwPlatform *p, const char *data_dir)
+static bool nw_window_attach(NwPlatform *p, const char *data_dir)
 {
     char *root = nw_data_root(data_dir);
-    if (!root || !nw_platform_init(p, NW_APP_NAME, 1280, 720)) {
-        SDL_free(root);
-        return false;
-    }
+    if (!root) return false;
     bool ok = nw_backend_init();
     if (ok) {
         ok = nw_debug_init(p, root);
-        if (!ok) {
-            nw_backend_shutdown();
-        }
+        if (!ok) nw_backend_shutdown();
     }
     SDL_free(root);
-    if (!ok) {
-        SDL_Log(NW_APP_NAME ": %s", SDL_GetError());
-        nw_platform_shutdown(p);
-    }
+    if (!ok) SDL_Log(NW_APP_NAME ": %s", SDL_GetError());
     return ok;
+}
+
+static bool nw_window_open(NwPlatform *p, const char *data_dir)
+{
+    if (!nw_platform_init(p, NW_APP_NAME, 1280, 720)) return false;
+    if (!nw_window_attach(p, data_dir)) {
+        nw_platform_shutdown(p);
+        return false;
+    }
+    return true;
+}
+
+static void nw_window_detach(void)
+{
+    nw_debug_shutdown();
+    nw_backend_shutdown();
 }
 
 static void nw_window_close(NwPlatform *p)
 {
-    nw_debug_shutdown();
-    nw_backend_shutdown();
+    nw_window_detach();
     nw_platform_shutdown(p);
 }
 
@@ -902,7 +909,7 @@ static void nw_boot_fatal(SDL_Window *window, const char *data_dir)
 
 /* Runs the game in the window; hardware_speed and aspect -1 take settings.toml's, which the debug menu changes and
    saves. */
-static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
+static int nw_boot(const char *data_dir, int hardware_speed, float aspect, NwPlatform *existing_platform)
 {
     char *root = nw_data_root(data_dir);
     if (root && !nw_log_open(root)) {
@@ -936,10 +943,9 @@ static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
     if (code) {
         return code;
     }
-    NwPlatform platform;
-    if (!nw_window_open(&platform, data_dir)) {
-        return 1;
-    }
+    NwPlatform owned_platform;
+    NwPlatform *platform = existing_platform ? existing_platform : &owned_platform;
+    if (!(existing_platform ? nw_window_attach(platform, data_dir) : nw_window_open(platform, data_dir))) return 1;
     if (nw_pad_script) {
         SDL_Log(NW_APP_NAME ": --pad-script plays the retail game: no [game] switches");
     } else {
@@ -980,7 +986,7 @@ static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
         nw_debug_toggle("Render", "Hitboxes", &hitboxes);
     }
     nw_control_panel_start(&settings.controls);
-    nw_wide_set(nw_video_start(&platform, &settings), settings.hud);
+    nw_wide_set(nw_video_start(platform, &settings), settings.hud);
     NwSettings applied = settings;
     bool unsaved = false;
     uint64_t changed = 0; /* when the settings last changed */
@@ -993,7 +999,7 @@ static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
     if (!nw_game_start(nw_game_main, 1, nw_game_argv)) {
         SDL_Log(NW_APP_NAME ": no game thread: %s", SDL_GetError());
         nw_audio_close();
-        nw_window_close(&platform);
+        if (existing_platform) nw_window_detach(); else nw_window_close(platform);
         return 1;
     }
     if (presence && !nw_discord_start(&(NwDiscordConfig){ .app_id = NW_DISCORD_APP_ID })) {
@@ -1016,7 +1022,7 @@ static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
         nw_input_poll(!nw_debug_wants_keyboard());
         if (nw_game_state() == NW_GAME_FATAL) {
             nw_discord_stop();
-            nw_boot_fatal(platform.window, data_dir);
+            nw_boot_fatal(platform->window, data_dir);
             running = false;
         }
         if (!nw_settings_equal(&settings, &applied)) {
@@ -1056,7 +1062,7 @@ static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
             SDL_snprintf(title, sizeof(title), NW_APP_NAME " %s - game %s, frame %llu, vblank %llu", nw_build_name,
                          nw_game_state_name(state), (unsigned long long)nw_game_swaps(),
                          (unsigned long long)nw_game_edges());
-            SDL_SetWindowTitle(platform.window, title);
+            SDL_SetWindowTitle(platform->window, title);
             titled = SDL_GetTicks();
         }
         if (presence && SDL_GetTicks() - presented >= 1000) {
@@ -1068,10 +1074,10 @@ static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
             presented = SDL_GetTicks();
         }
         int width, height;
-        nw_display_size(platform.window, &width, &height);
+        nw_display_size(platform->window, &width, &height);
         nw_backend_frame(width, height, settings.interpolation ? nw_game_edge_time() : -1.0);
         nw_debug_frame();
-        SDL_GL_SwapWindow(platform.window);
+        SDL_GL_SwapWindow(platform->window);
     }
     nw_discord_stop();
     if (unsaved) {
@@ -1086,7 +1092,7 @@ static int nw_boot(const char *data_dir, int hardware_speed, float aspect)
     }
     nw_input_shutdown();
     nw_audio_close();
-    nw_window_close(&platform);
+    if (existing_platform) nw_window_detach(); else nw_window_close(platform);
     return nw_boot_exit(state == NW_GAME_FATAL ? 1 : 0, parked);
 }
 
@@ -1516,7 +1522,7 @@ int main(int argc, char *argv[])
         return check_data   ? nw_check_data(data_dir)
                : boot_check ? nw_boot_check(data_dir, boot_check, boot_loads,
                                             stepped ? NW_CLOCK_STEPPED : NW_CLOCK_REALTIME, speed > 0)
-                            : nw_boot(data_dir, speed, aspect);
+                            : nw_boot(data_dir, speed, aspect, NULL);
 #else
         fprintf(stderr, NW_APP_NAME ": built without the decomp (NUWORLD_DECOMP=OFF)\n");
         return 2;
@@ -1573,7 +1579,26 @@ int main(int argc, char *argv[])
             nw_ui_begin();
             NwWizardResult result = nw_wizard_draw(wizard);
             nw_ui_end();
-            if (result != NW_WIZARD_OPEN) {
+            if (result == NW_WIZARD_START_GAME) {
+#if defined(NW_WITH_GAME)
+                nw_wizard_destroy(wizard);
+                wizard = NULL;
+                nw_ui_shutdown();
+                int boot_code = nw_boot(data_dir, -1, -1.0f, &platform);
+                SDL_Log(NW_APP_NAME ": game session ended with code %d", boot_code);
+                if (!nw_ui_init(&platform, false)) {
+                    char msg[512];
+                    SDL_snprintf(msg, sizeof(msg), "The control center could not restart:\n%s", SDL_GetError());
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, NW_APP_NAME, msg, platform.window);
+                    running = false;
+                } else {
+                    wizard = nw_wizard_create(platform.window, root);
+                    if (!wizard) running = false;
+                }
+#else
+                SDL_Log(NW_APP_NAME ": this build has no game runtime");
+#endif
+            } else if (result != NW_WIZARD_OPEN) {
                 nw_wizard_destroy(wizard);
                 wizard = NULL;
                 running = result != NW_WIZARD_QUIT;
