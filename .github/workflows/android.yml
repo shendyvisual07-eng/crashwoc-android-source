@@ -25,12 +25,16 @@ jobs:
           packages: platform-tools
       - name: Install Android build tools
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358" "cmake;3.30.3"
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
+      - name: Install Gradle 8.9 from distribution host
+        run: |
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 5 \
+            https://downloads.gradle.org/distributions/gradle-8.9-bin.zip \
+            --output /tmp/gradle-8.9-bin.zip
+          unzip -q /tmp/gradle-8.9-bin.zip -d /opt
+          echo "/opt/gradle-8.9/bin" >> "$GITHUB_PATH"
       - name: Build debug APK
         working-directory: android
-        run: gradle assembleDebug
+        run: gradle --no-daemon assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
