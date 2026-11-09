@@ -2,6 +2,30 @@
    (nw_strlwr and nw_divdi3 through port/nw_prelude.h). */
 #include <ctype.h>
 #include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#if defined(__ANDROID__)
+/* Identify small-buffer callsites without logging formatted contents. */
+int nw_vsprintf_diag(char *dst, size_t dst_size, const char *fmt, va_list ap,
+                     const char *file, int line)
+{
+    if (dst_size != (size_t)-1 && dst_size <= 32) {
+        char message[512];
+        int n = snprintf(message, sizeof message,
+                         "CrashWOC vsprintf site: %s:%d destination=%zu",
+                         file, line, dst_size);
+        if (n > 0) {
+            size_t count = (size_t)n < sizeof message ? (size_t)n : sizeof message - 1;
+            (void)write(STDERR_FILENO, message, count);
+            (void)write(STDERR_FILENO, "\n", 1);
+        }
+    }
+    return __builtin___vsprintf_chk(dst, 0, dst_size, fmt, ap);
+}
+#endif
+
 #include <string.h>
 
 #include "shim/shim.h"
