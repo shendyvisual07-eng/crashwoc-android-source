@@ -149,6 +149,9 @@ static void nw_log_signal(int sig, siginfo_t *info, void *ctx)
     void *at = NULL;
 #if defined(__linux__) && defined(__x86_64__)
     at = (void *)((ucontext_t *)ctx)->uc_mcontext.gregs[REG_RIP];
+#elif defined(__linux__) && defined(__aarch64__)
+    /* Android/ARM64: keep the fault PC in the app log even when debuggerd cannot unwind maps. */
+    at = (void *)((ucontext_t *)ctx)->uc_mcontext.pc;
 #else
     (void)ctx;
 #endif
