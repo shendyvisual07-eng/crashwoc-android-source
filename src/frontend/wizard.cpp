@@ -56,6 +56,7 @@ typedef enum NwWizardPage {
     NW_PAGE_PICK,
     NW_PAGE_RUN,
     NW_PAGE_DONE,
+    NW_PAGE_READY,
     NW_PAGE_FAILED,
 } NwWizardPage;
 
@@ -408,7 +409,28 @@ static NwWizardResult nw_wizard_done(NwWizard *w)
     ImGui::Spacing();
     static const char *const next[] = { "Continue" };
     nw_wizard_align_right(next, 1);
-    return ImGui::Button("Continue") ? NW_WIZARD_CLOSED : NW_WIZARD_OPEN;
+    if (ImGui::Button("Continue")) {
+#if defined(NW_WITH_GAME)
+        return NW_WIZARD_CLOSED;
+#else
+        w->page = NW_PAGE_READY;
+#endif
+    }
+    return NW_WIZARD_OPEN;
+}
+
+static void nw_wizard_ready(NwWizard *w)
+{
+    nw_wizard_title("Disc ready");
+    nw_wizard_wrapped(nw_wizard_ok, "Your PAL v" NW_DISC_VER " game data has been imported and verified.");
+    ImGui::Spacing();
+    ImGui::TextWrapped("The Android build currently contains the setup and import tools, but the NuWorld gameplay runtime is not enabled yet. The blank screen after Continue was caused by leaving the setup wizard without a game runtime to draw.");
+    ImGui::Spacing();
+    ImGui::TextWrapped("Your imported game data is safe. You do not need to import the disc again.");
+    ImGui::Spacing();
+    if (ImGui::Button("Back to Control Center")) {
+        w->section = 1;
+    }
 }
 
 static void nw_wizard_failed(NwWizard *w)
@@ -701,6 +723,7 @@ NwWizardResult nw_wizard_draw(NwWizard *w)
         case NW_PAGE_PICK: result = nw_wizard_pick(w); break;
         case NW_PAGE_RUN: nw_wizard_run(w); break;
         case NW_PAGE_DONE: result = nw_wizard_done(w); break;
+        case NW_PAGE_READY: nw_wizard_ready(w); break;
         case NW_PAGE_FAILED: nw_wizard_failed(w); break;
         }
     } else {
